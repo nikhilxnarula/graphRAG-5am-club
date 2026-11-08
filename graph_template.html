@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5 AM Club Knowledge Graph</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --edge: #898781;
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+    --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+    --other: #898781;
+    --focus: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --axis: #383835; --edge: #898781;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+      --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+      --focus: #3987e5;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835; --edge: #898781;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    --focus: #3987e5;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header { padding: 14px 16px 10px; }
+  h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .sub { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 0 16px 10px; }
+  .bar input[type="search"] {
+    width: 260px; max-width: 100%; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--axis); background: var(--surface); color: var(--ink); font: inherit;
+  }
+  .bar label { color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  button {
+    font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--axis);
+    border-radius: 8px; padding: 5px 12px; cursor: pointer;
+  }
+  button:hover { background: var(--grid); }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  main { flex: 1; min-height: 0; display: flex; gap: 12px; padding: 0 16px 16px; }
+  #stage {
+    flex: 1; min-width: 0; position: relative; background: var(--surface);
+    border: 1px solid var(--grid); border-radius: 12px; overflow: hidden;
+  }
+  #net { position: absolute; inset: 0; }
+  .hint { position: absolute; left: 12px; bottom: 10px; color: var(--muted); font-size: 12px; pointer-events: none; }
+  aside {
+    width: 340px; flex: none; overflow-y: auto; background: var(--surface);
+    border: 1px solid var(--grid); border-radius: 12px; padding: 14px;
+  }
+  aside h2 { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 16px 0 6px; font-weight: 600; }
+  aside h2:first-child { margin-top: 0; }
+  .row {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    background: transparent; border: 0; border-radius: 8px; padding: 5px 6px; cursor: pointer; color: var(--ink);
+  }
+  .row:hover { background: var(--grid); }
+  .row[aria-pressed="true"] { background: var(--grid); font-weight: 600; }
+  .row .name { flex: 1; min-width: 0; }
+  .row .n { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+  .dot.ring { background: transparent; border: 2px solid var(--muted); }
+  .shapes { display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--ink-2); font-size: 12.5px; }
+  .shapes span { display: inline-flex; align-items: center; gap: 5px; }
+  .shapes svg { width: 12px; height: 12px; fill: var(--ink-2); }
+  #detail:not(:empty) { margin-bottom: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--grid); }
+  #detail:empty + h2 { margin-top: 0; }
+  .card h3 { margin: 0; font-size: 16px; }
+  .meta { color: var(--ink-2); font-size: 12.5px; margin: 2px 0 8px; display: flex; align-items: center; gap: 6px; }
+  .desc { color: var(--ink); font-size: 13.5px; }
+  .neigh { margin: 4px 0 0; padding: 0; list-style: none; }
+  .small { color: var(--ink-2); font-size: 12.5px; }
+  .stat { display: inline-block; margin-right: 14px; }
+  .stat b { font-weight: 600; color: var(--ink); }
+  .tip { max-width: 320px; font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; color: #0b0b0b; background: #fcfcfb; padding: 8px 10px; border-radius: 8px; border: 1px solid #c3c2b7; }
+  .tip b { font-size: 14px; }
+  .tip .m { color: #52514e; font-size: 12px; margin: 1px 0 4px; }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .tip { background: #1a1a19; color: #f0efec; border-color: #383835; }
+    :root:where(:not([data-theme="light"])) .tip .m { color: #c3c2b7; }
+  }
+  :root[data-theme="dark"] .tip { background: #1a1a19; color: #f0efec; border-color: #383835; }
+  :root[data-theme="dark"] .tip .m { color: #c3c2b7; }
+  @media (max-width: 860px) {
+    main { flex-direction: column; }
+    #stage { min-height: 62vh; flex: none; }
+    aside { width: auto; max-height: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>The 5 AM Club — knowledge graph</h1>
+  <div class="sub" id="sub"></div>
+</header>
+<div class="bar">
+  <input id="search" type="search" list="names" placeholder="Find an entity…" aria-label="Find an entity" autocomplete="off">
+  <datalist id="names"></datalist>
+  <label><input id="frag" type="checkbox"> Show disconnected fragments</label>
+  <button id="reset" type="button">Reset view</button>
+</div>
+<main>
+  <div id="stage">
+    <div id="net" role="img" aria-label="Interactive knowledge graph of entities and relationships; use the panel on the right to browse the same data as lists."></div>
+    <div class="hint">Colour = community · size = connections · scroll to zoom, drag to pan, click a node</div>
+  </div>
+  <aside>
+    <div id="detail"></div>
+    <h2>Communities <span class="small" style="text-transform:none;letter-spacing:0">(click to isolate)</span></h2>
+    <div id="legend"></div>
+    <h2>Entity type</h2>
+    <div class="shapes" id="shapes"></div>
+    <h2>Most connected</h2>
+    <div id="top"></div>
+  </aside>
+</main>
+
+/*__VIS__*/
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById('data').textContent);
+  const root = document.documentElement;
+  const css = (n) => getComputedStyle(root).getPropertyValue(n).trim();
+  const tcase = (t) => t === 'GEO' ? 'Place' : t === 'ORGANIZATION' ? 'Organization' : t === 'PERSON' ? 'Person' : t === 'EVENT' ? 'Event' : t;
+  const SHAPE = { PERSON: 'dot', ORGANIZATION: 'square', GEO: 'triangle', EVENT: 'diamond' };
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  const byId = new Map(D.nodes.map(n => [n.id, n]));
+  const commById = new Map(D.communities.map(c => [c.id, c]));
+  const adj = new Map(D.nodes.map(n => [n.id, []]));
+  D.edges.forEach((e, i) => { adj.get(e.s).push({ id: e.t, e: i }); adj.get(e.t).push({ id: e.s, e: i }); });
+  const nClustered = D.nodes.filter(n => n.comm >= 0).length;
+  const nFrag = D.nodes.length - nClustered;
+  document.getElementById('sub').textContent =
+    `${D.nodes.length} entities · ${D.edges.length} relationships · ${D.communities.length} communities (top level of the GraphRAG hierarchy)`;
+
+  // ---- state ------------------------------------------------------------------------------
+  const S = { sel: null, slot: null, frag: false };
+  let lastScale = 1;
+
+  const slotColor = (slot) => slot > 0 ? css('--s' + slot) : css('--other');
+  const nodeColor = (n) => n.slot < 0 ? css('--surface') : slotColor(n.slot);
+  const labelMinDeg = (scale) => scale < 0.35 ? 40 : scale < 0.8 ? 14 : scale < 1.3 ? 7 : scale < 2 ? 3 : 0;
+
+  const nodeTips = new Map(), edgeTips = [];
+  const nodes = new vis.DataSet(D.nodes.map(n => ({ id: n.id, x: n.x, y: n.y })));
+  const edges = new vis.DataSet(D.edges.map((e, i) => ({ id: i, from: e.s, to: e.t })));
+
+  function tipFor(n) {
+    const t = el('div', 'tip');
+    t.appendChild(el('b', null, n.name));
+    const c = commById.get(n.comm);
+    t.appendChild(el('div', 'm', `${tcase(n.type)} · ${n.deg} connection${n.deg === 1 ? '' : 's'}${c ? ' · ' + c.title : ''}`));
+    if (n.desc) t.appendChild(el('div', null, n.desc.length > 220 ? n.desc.slice(0, 220) + '…' : n.desc));
+    return t;
+  }
+  function edgeTip(e) {
+    const t = el('div', 'tip');
+    t.appendChild(el('b', null, `${byId.get(e.s).name} — ${byId.get(e.t).name}`));
+    t.appendChild(el('div', 'm', `strength ${e.w}`));
+    if (e.desc) t.appendChild(el('div', null, e.desc.length > 240 ? e.desc.slice(0, 240) + '…' : e.desc));
+    return t;
+  }
+
+  D.nodes.forEach(n => nodeTips.set(n.id, tipFor(n)));
+  D.edges.forEach(e => edgeTips.push(edgeTip(e)));
+
+  const options = {
+    physics: false,
+    layout: { improvedLayout: false },
+    interaction: { hover: true, tooltipDelay: 120, hideEdgesOnZoom: false, zoomSpeed: 0.6, keyboard: true },
+    nodes: { borderWidth: 2, borderWidthSelected: 3, scaling: { min: 8, max: 56 }, font: { face: 'system-ui, Segoe UI, sans-serif', size: 14, strokeWidth: 4 } },
+    edges: { smooth: false, scaling: { min: 1, max: 6 }, selectionWidth: 0, hoverWidth: 0 }
+  };
+  const network = new vis.Network(document.getElementById('net'), { nodes, edges }, options);
+
+  // ---- rendering: one function derives every node/edge style from state -----------------
+  function nodeMatchesFilter(n) { return S.slot === null || n.slot === S.slot; }
+
+  function render() {
+    const scale = network.getScale();
+    const minDeg = labelMinDeg(scale);
+    const fs = Math.min(46, Math.max(14, 13 / scale));
+    lastScale = scale;
+    const surface = css('--surface'), ink = css('--ink'), edgeC = css('--edge');
+    const selN = S.sel === null ? null : new Set([S.sel, ...adj.get(S.sel).map(a => a.id)]);
+    const selE = S.sel === null ? null : new Set(adj.get(S.sel).map(a => a.e));
+    const selTop = S.sel === null ? null : new Set(adj.get(S.sel).slice().sort((a, b) => D.edges[b.e].w - D.edges[a.e].w).slice(0, 12).map(a => a.id));
+    const nUpd = D.nodes.map(n => {
+      const hidden = !S.frag && n.comm < 0;
+      const inSel = selN ? selN.has(n.id) : true;
+      const inFilter = nodeMatchesFilter(n);
+      const lit = inSel && inFilter;
+      const showLabel = lit && (n.id === S.sel || (selTop && selTop.has(n.id)) || n.deg >= minDeg);
+      const fill = nodeColor(n);
+      return {
+        id: n.id, hidden,
+        shape: SHAPE[n.type] || 'dot',
+        value: Math.sqrt(Math.max(n.deg, 1)),
+        label: showLabel ? n.name : '',
+        title: nodeTips.get(n.id),
+        opacity: lit ? 1 : 0.1,
+        color: {
+          background: fill,
+          border: n.slot < 0 ? css('--muted') : (n.id === S.sel ? ink : surface),
+          highlight: { background: fill, border: ink },
+          hover: { background: fill, border: ink }
+        },
+        font: { color: ink, strokeColor: surface, size: n.id === S.sel ? fs * 1.25 : fs }
+      };
+    });
+    nodes.update(nUpd);
+
+    const eUpd = D.edges.map((e, i) => {
+      const a = byId.get(e.s), b = byId.get(e.t);
+      const frag = a.comm < 0 || b.comm < 0;
+      const hidden = !S.frag && frag;
+      const same = a.comm === b.comm && a.comm >= 0;
+      let op = same ? 0.5 : 0.2;
+      let color = edgeC;
+      if (selE) { if (selE.has(i)) { op = 0.85; color = slotColor(byId.get(S.sel).slot); } else op = 0.03; }
+      else if (S.slot !== null) { op = (a.slot === S.slot && b.slot === S.slot) ? 0.5 : 0.03; }
+      return { id: i, hidden, value: Math.log1p(e.w), title: edgeTips[i], color: { color, opacity: op, highlight: color, hover: color } };
+    });
+    edges.update(eUpd);
+  }
+
+  // ---- selection / focus --------------------------------------------------------------------
+  function select(id, focus) {
+    S.sel = id;
+    if (id !== null && S.slot !== null && byId.get(id).slot !== S.slot) S.slot = null;
+    render(); renderLegend(); renderDetail();
+    if (id !== null && focus) network.focus(id, { scale: Math.max(network.getScale(), 0.9), animation: { duration: 450, easingFunction: 'easeInOutQuad' } });
+  }
+  function isolate(slot) {
+    S.slot = (S.slot === slot) ? null : slot; S.sel = null;
+    render(); renderLegend(); renderDetail();
+    if (S.slot !== null) {
+      const ids = D.nodes.filter(n => n.slot === S.slot && (n.comm >= 0)).map(n => n.id);
+      network.fit({ nodes: ids, animation: { duration: 450, easingFunction: 'easeInOutQuad' } });
+    }
+  }
+  function fitVisible() {
+    const ids = D.nodes.filter(n => S.frag || n.comm >= 0).map(n => n.id);
+    network.fit({ nodes: ids, animation: false });
+  }
+
+  network.on('click', (p) => {
+    if (p.nodes.length) select(p.nodes[0], false);
+    else if (!p.edges.length) { S.sel = null; render(); renderLegend(); renderDetail(); }
+  });
+  network.on('doubleClick', (p) => { if (p.nodes.length) select(p.nodes[0], true); });
+  let raf = 0;
+  network.on('zoom', () => {
+    const sc = network.getScale();
+    if (Math.abs(sc / lastScale - 1) < 0.12) return;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(render);
+  });
+
+  // ---- side panel -----------------------------------------------------------------------------
+  function swatch(slot, ring) { const d = el('span', 'dot' + (ring ? ' ring' : '')); if (!ring) d.style.background = slotColor(slot); return d; }
+
+  function renderLegend() {
+    const host = document.getElementById('legend'); host.textContent = '';
+    const named = D.communities.filter(c => c.slot > 0);
+    const other = D.communities.filter(c => c.slot === 0);
+    const mk = (slot, label, count, title, ring) => {
+      const b = el('button', 'row'); b.type = 'button';
+      b.setAttribute('aria-pressed', String(S.slot === slot));
+      if (title) b.title = title;
+      b.append(swatch(slot, ring), el('span', 'name', label), el('span', 'n', String(count)));
+      b.addEventListener('click', () => isolate(slot));
+      return b;
+    };
+    named.forEach(c => host.appendChild(mk(c.slot, c.title, c.size, c.summary)));
+    if (other.length) host.appendChild(mk(0, `Other communities (${other.length})`, other.reduce((a, c) => a + c.size, 0), other.map(c => c.title).join(' · ')));
+    const f = el('div', 'row'); f.style.cursor = 'default';
+    f.append(swatch(-1, true), el('span', 'name', 'Not clustered (disconnected fragments)'), el('span', 'n', String(nFrag)));
+    host.appendChild(f);
+  }
+
+  function nodeButton(n) {
+    const b = el('button', 'row'); b.type = 'button';
+    b.append(swatch(n.slot, n.slot < 0), el('span', 'name', n.name), el('span', 'n', String(n.deg)));
+    b.addEventListener('click', () => select(n.id, true));
+    return b;
+  }
+
+  function renderDetail() {
+    const host = document.getElementById('detail'); host.textContent = '';
+    if (S.sel !== null) {
+      const n = byId.get(S.sel), c = commById.get(n.comm);
+      host.appendChild(el('h2', null, 'Selected'));
+      const card = el('div', 'card');
+      card.appendChild(el('h3', null, n.name));
+      const meta = el('div', 'meta'); meta.append(swatch(n.slot, n.slot < 0), el('span', null, `${tcase(n.type)}${c ? ' · ' + c.title : ''}`));
+      card.appendChild(meta);
+      if (n.desc) card.appendChild(el('div', 'desc', n.desc + (n.desc.length >= 420 ? '…' : '')));
+      const st = el('div', 'small'); st.style.margin = '8px 0 4px';
+      const s1 = el('span', 'stat'); s1.append(el('b', null, String(n.deg)), document.createTextNode(' connections'));
+      const s2 = el('span', 'stat'); s2.append(el('b', null, String(n.freq)), document.createTextNode(' mentions'));
+      st.append(s1, s2); card.appendChild(st);
+      const ns = adj.get(S.sel).map(a => ({ n: byId.get(a.id), e: D.edges[a.e] })).sort((x, y) => y.e.w - x.e.w);
+      card.appendChild(el('div', 'small', 'Connected to (strongest first)'));
+      const ul = el('ul', 'neigh');
+      ns.slice(0, 12).forEach(x => { const li = el('li'); li.appendChild(nodeButton(x.n)); ul.appendChild(li); });
+      card.appendChild(ul);
+      if (ns.length > 12) card.appendChild(el('div', 'small', `+ ${ns.length - 12} more (highlighted in the graph)`));
+      host.appendChild(card);
+    } else if (S.slot !== null) {
+      const c = D.communities.find(c => c.slot === S.slot);
+      if (S.slot > 0 && c) {
+        host.appendChild(el('h2', null, 'Community report'));
+        const card = el('div', 'card'); card.appendChild(el('h3', null, c.title));
+        card.appendChild(el('div', 'desc', c.summary)); host.appendChild(card);
+      }
+    }
+  }
+
+  function renderStatic() {
+    const sh = document.getElementById('shapes'); sh.textContent = '';
+    const svgs = { PERSON: '<circle cx="6" cy="6" r="5"/>', ORGANIZATION: '<rect x="1" y="1" width="10" height="10"/>', GEO: '<polygon points="6,1 11,11 1,11"/>', EVENT: '<polygon points="6,0.5 11.5,6 6,11.5 0.5,6"/>' };
+    Object.keys(svgs).forEach(k => {
+      const s = el('span'); const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 12 12'); svg.setAttribute('aria-hidden', 'true'); svg.innerHTML = svgs[k];
+      s.append(svg, document.createTextNode(tcase(k))); sh.appendChild(s);
+    });
+    const top = document.getElementById('top'); top.textContent = '';
+    D.nodes.filter(n => n.comm >= 0).sort((a, b) => b.deg - a.deg).slice(0, 15).forEach(n => top.appendChild(nodeButton(n)));
+    const dl = document.getElementById('names'); dl.textContent = '';
+    D.nodes.slice().sort((a, b) => a.name.localeCompare(b.name)).forEach(n => { const o = document.createElement('option'); o.value = n.name; dl.appendChild(o); });
+  }
+
+  // ---- controls ---------------------------------------------------------------------------------
+  const search = document.getElementById('search');
+  search.addEventListener('change', () => {
+    const q = search.value.trim().toLowerCase(); if (!q) return;
+    const hit = D.nodes.find(n => n.name.toLowerCase() === q) || D.nodes.filter(n => n.name.toLowerCase().includes(q)).sort((a, b) => b.deg - a.deg)[0];
+    if (!hit) return;
+    if (hit.comm < 0 && !S.frag) { S.frag = true; document.getElementById('frag').checked = true; }
+    select(hit.id, true);
+  });
+  document.getElementById('frag').addEventListener('change', (e) => { S.frag = e.target.checked; render(); fitVisible(); render(); });
+  document.getElementById('reset').addEventListener('click', () => {
+    S.sel = null; S.slot = null; search.value = ''; render(); renderLegend(); renderDetail(); fitVisible(); render();
+  });
+
+  // ---- theme: re-derive colours when the OS / data-theme changes --------------------------------
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  (mq.addEventListener ? mq.addEventListener('change', themed) : mq.addListener(themed));
+  new MutationObserver(themed).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  function themed() { render(); renderLegend(); renderDetail(); }
+
+  renderStatic(); renderLegend(); renderDetail(); render(); fitVisible(); render();
+  window.addEventListener('resize', () => network.redraw());
+  window.__graph = { network, S, D, select, isolate };
+})();
+</script>
+</body>
+</html>

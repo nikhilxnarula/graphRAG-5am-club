@@ -1,0 +1,23 @@
+completion_models:
+  default_completion_model:
+    model_provider: openai
+    model: gpt-4o-mini
+    auth_method: api_key
+    api_key: ${OPENAI_API_KEY}
+    retry:
+      type: exponential_backoff
+      max_retries: 7
+      base_delay: 2.0
+      max_delay: 60.0
+
+embedding_models:
+  default_embedding_model:
+    model_provider: openai
+    model: text-embedding-3-small
+    auth_method: api_key
+    api_key: ${OPENAI_API_KEY}
+    retry:
+      type: exponential_backoff
+      max_retries: 7
+      base_delay: 2.0
+      max_delay: 60.0
